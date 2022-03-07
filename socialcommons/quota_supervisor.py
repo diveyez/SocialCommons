@@ -38,8 +38,7 @@ def quota_supervisor(Settings, job, update=False):
             update_record(job)
 
         else:  # inspect and control the action's availability
-            quota_state = controller(Settings, job)
-            return quota_state
+            return controller(Settings, job)
 
 
 def controller(Settings, job):
@@ -69,18 +68,17 @@ def controller(Settings, job):
             sleep_actual(nap)
             toast_notification(Settings, notify, "wakeup", job, interval)
 
+        elif job == "server_calls":
+            send_message(job, "exit", interval, None)
+            toast_notification(Settings, notify, "exit", job, interval)
+
+            logger.warning("You're about to leave the session. "
+                           "FacebookPy will exit soon!")
+            exit()
+
         else:
-            if job == "server_calls":
-                send_message(job, "exit", interval, None)
-                toast_notification(Settings, notify, "exit", job, interval)
-
-                logger.warning("You're about to leave the session. "
-                               "FacebookPy will exit soon!")
-                exit()
-
-            else:
-                send_message(job, "jump", interval, None)
-                return "jump"
+            send_message(job, "jump", interval, None)
+            return "jump"
 
     return "available"
 
@@ -186,17 +184,13 @@ def stochast_values(peaks, orig_peaks, interval, percent):
 
 def stoch_randomizer(value, percent):
     """ Value randomizer for stochastic flow """
-    stochastic_value = random.randint(
+    return random.randint(
         int((value + 1) * percent / 100), value)
-
-    return stochastic_value
 
 
 def remaining_time(sleepyhead, interval):
     """ Calculate wake up time and return accurate or close-range random
     sleep seconds """
-    extra_sleep_percent = 140  # actually 114 also is not that bad amount
-
     if interval == "hourly":
         remaining_seconds = (61 - int(this_minute)) * 60
 
@@ -207,6 +201,8 @@ def remaining_time(sleepyhead, interval):
         remaining_seconds = (midnight - now).seconds
 
     if sleepyhead is True:
+        extra_sleep_percent = 140  # actually 114 also is not that bad amount
+
         remaining_seconds = random.randint(
             remaining_seconds,
             int(remaining_seconds *
@@ -294,7 +290,7 @@ def toast_notification(Settings, notify, alert, job, interval):
 def get_icons(Settings):
     """ Return the locations of icons according to the operating system """
     # get full location of icons folder inside package
-    icons_path = get_pkg_resource_path(Settings.platform_name + "py", "icons/")
+    icons_path = get_pkg_resource_path(f'{Settings.platform_name}py', "icons/")
 
     windows_ico = [
         "Windows/qs_sleep_windows.ico",
@@ -321,9 +317,7 @@ def get_icons(Settings):
                    mac_icns if platform.startswith("darwin") else
                    [None, None, None])
 
-    icons = {"sleep": sleep_icon, "wakeup": wakeup_icon, "exit": exit_icon}
-
-    return icons
+    return {"sleep": sleep_icon, "wakeup": wakeup_icon, "exit": exit_icon}
 
 
 def load_records(Settings):

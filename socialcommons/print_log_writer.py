@@ -11,9 +11,7 @@ from selenium.common.exceptions import WebDriverException
 
 def get_log_time():
     ''' this method will keep same format for all recored'''
-    log_time = datetime.now().strftime('%Y-%m-%d %H:%M')
-
-    return log_time
+    return datetime.now().strftime('%Y-%m-%d %H:%M')
 
 
 def log_follower_num(browser, Settings, base_url,
@@ -21,7 +19,7 @@ def log_follower_num(browser, Settings, base_url,
     """Prints and logs the current number of followers to
     a seperate file"""
     if base_url[-1] != '/':
-        base_url = base_url + '/'
+        base_url = f'{base_url}/'
     user_link = base_url + userid
     web_address_navigator(browser, user_link, logger, Settings)
 
@@ -55,7 +53,7 @@ def log_following_num(browser, Settings, base_url,
     """Prints and logs the current number of followers to
     a seperate file"""
     if base_url[-1] != '/':
-        base_url = base_url + '/'
+        base_url = f'{base_url}/'
     user_link = base_url + userid
     web_address_navigator(browser, user_link, logger, Settings)
 

@@ -105,7 +105,7 @@ def check_image(browser,
 def given_tags_in_result(search_tags, clarifai_tags, full_match=False):
     """Checks the clarifai tags if it contains one (or all) search tags """
     if full_match:
-        return all([tag in clarifai_tags for tag in search_tags])
+        return all(tag in clarifai_tags for tag in search_tags)
     else:
         return any((tag in clarifai_tags for tag in search_tags))
 
@@ -124,17 +124,11 @@ def get_source_link(browser):
                 '//img[@class="FFVAD"]').get_attribute('src')
         )
     except NoSuchElementException:
-        source.append(
-            browser.find_element_by_xpath(
+        source.extend((browser.find_element_by_xpath(
                 '//video[@class="tWeCl"]').get_attribute(
                 'src'
-            )
-        )
-        source.append(
-            browser.find_element_by_xpath(
-                '//img[@class="_8jZFn"]').get_attribute('src')
-        )
-
+            ), browser.find_element_by_xpath(
+                '//img[@class="_8jZFn"]').get_attribute('src')))
     return source
 
 
@@ -175,21 +169,16 @@ def get_clarifai_response(clarifai_api, clarifai_model, source_link,
             and source_link[0].endswith('mp4')
             and clarifai_model.lower() in video_models
     ):
-        response = model.predict_by_url(source_link[0], is_video=True)
-    # If source is video but model does not accept video inputs or
-    # check_video is False, analyze content of keyframe
+        return model.predict_by_url(source_link[0], is_video=True)
     elif source_link[0].endswith('mp4'):
-        response = model.predict_by_url(source_link[1])
+        return model.predict_by_url(source_link[1])
     else:
-        response = model.predict_by_url(source_link[0])
-
-    return response
+        return model.predict_by_url(source_link[0])
 
 
 def get_clarifai_tags(clarifai_response, probability):
     """Get the response from the Clarifai API and return results filtered by
     concepts with a confidence set by probability parameter (default 50%)"""
-    results = []
     concepts = []
 
     # Parse response for Color model
@@ -245,9 +234,8 @@ def get_clarifai_tags(clarifai_response, probability):
     except KeyError:
         pass
 
-    # Filter concepts based on probability threshold
-    for concept in concepts:
-        if float([x for x in concept.values()][0]) > probability:
-            results.append(str([x for x in concept.keys()][0]))
-
-    return results
+    return [
+        str(list(concept.keys())[0])
+        for concept in concepts
+        if float(list(concept.values())[0]) > probability
+    ]

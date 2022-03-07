@@ -43,36 +43,19 @@ def set_workspace(Settings, path=None):
                 update_workspace(path, Settings)
                 update_locations(Settings)
                 message = "Custom workspace set: \"{}\" :]".format(path)
-                highlight_print(Settings, Settings.profile["name"],
-                                message,
-                                "workspace",
-                                "info",
-                                Settings.logger)
-
             else:
                 message = "Given workspace path is identical as current :/"
-                highlight_print(Settings, Settings.profile["name"],
-                                message,
-                                "workspace",
-                                "info",
-                                Settings.logger)
-
         else:
             message = "No any custom workspace provided.\t~using existing.."
-            highlight_print(Settings, Settings.profile["name"],
-                            message,
-                            "workspace",
-                            "info",
-                            Settings.logger)
-
     else:
         message = ("Sorry! You can't change workspace after"
                    " FacebookPy has started :>\t~using existing..")
-        highlight_print(Settings, Settings.profile["name"],
-                        message,
-                        "workspace",
-                        "info",
-                        Settings.logger)
+
+    highlight_print(Settings, Settings.profile["name"],
+                    message,
+                    "workspace",
+                    "info",
+                    Settings.logger)
 
 
 def update_workspace(latest_path, Settings):
@@ -102,7 +85,9 @@ def update_locations(Settings):
     # update database location
     if not Settings.DATABASE_LOCATION:
         Settings.DATABASE_LOCATION = Settings.localize_path(
-            "FacebookPy", "db", Settings.platform_name + "py.db")
+            "FacebookPy", "db", f'{Settings.platform_name}py.db'
+        )
+
 
     # update chromedriver location
     if not Settings.chromedriver_location:
@@ -207,9 +192,8 @@ def get_chromedriver_location(Settings):
     """ Solve chromedriver access issues """
     CD = Settings.chromedriver_location
 
-    if Settings.OS_ENV == "windows":
-        if not CD.endswith(".exe"):
-            CD += ".exe"
+    if Settings.OS_ENV == "windows" and not CD.endswith(".exe"):
+        CD += ".exe"
 
     if not file_exists(CD):
         workspace_path = slashen(Settings.WORKSPACE["path"], "native")

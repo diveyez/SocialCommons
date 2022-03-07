@@ -115,11 +115,11 @@ def validate_userid(browser,
 
     """Checks the potential of target user by relationship status in order
     to delimit actions within the desired boundary"""
-    if potency_ratio or delimit_by_numbers and (
-            max_followers or max_following or min_followers or min_following):
-
-        relationship_ratio = None
-        reverse_relationship = False
+    if (
+        potency_ratio
+        or delimit_by_numbers
+        and (max_followers or max_following or min_followers or min_following)
+    ):
 
         # get followers & following counts
         followers_count, following_count = get_relationship_counts(browser,
@@ -128,10 +128,12 @@ def validate_userid(browser,
                                                                    userid,
                                                                    logger, Settings)
 
+        reverse_relationship = False
         if potency_ratio and potency_ratio < 0:
             potency_ratio *= -1
             reverse_relationship = True
 
+        relationship_ratio = None
         if followers_count and following_count:
             relationship_ratio = (
                 float(followers_count) / float(following_count)
@@ -139,73 +141,98 @@ def validate_userid(browser,
                 else float(following_count) / float(followers_count))
 
         logger.info(
-            "User: '{}'  |> followers: {}  |> following: {}  |> relationship "
-            "ratio: {}"
-            .format(userid,
-                    followers_count if followers_count else 'unknown',
-                    following_count if following_count else 'unknown',
-                    truncate_float(relationship_ratio,
-                                   2) if relationship_ratio else 'unknown'))
+            (
+                "User: '{}'  |> followers: {}  |> following: {}  |> relationship "
+                "ratio: {}".format(
+                    userid,
+                    followers_count or 'unknown',
+                    following_count or 'unknown',
+                    truncate_float(relationship_ratio, 2)
+                    if relationship_ratio
+                    else 'unknown',
+                )
+            )
+        )
 
-        if followers_count or following_count:
-            if potency_ratio and not delimit_by_numbers:
-                if relationship_ratio and relationship_ratio < potency_ratio:
+
+        if (
+            followers_count
+            and potency_ratio
+            and not delimit_by_numbers
+            and relationship_ratio
+            and relationship_ratio < potency_ratio
+            or not followers_count
+            and following_count
+            and potency_ratio
+            and not delimit_by_numbers
+            and relationship_ratio
+            and relationship_ratio < potency_ratio
+        ):
+            inap_msg = (
+                "'{}' is not a {} with the relationship ratio of {}  "
+                "~skipping user\n"
+                .format(userid,
+                        "potential user" if not reverse_relationship
+                        else "massive follower",
+                        truncate_float(relationship_ratio, 2)))
+            return False, inap_msg
+
+        elif (
+            (not followers_count or not potency_ratio or delimit_by_numbers)
+            and (not followers_count or delimit_by_numbers)
+            and (
+                followers_count
+                or not following_count
+                or not potency_ratio
+                or delimit_by_numbers
+            )
+            and (followers_count or not following_count or delimit_by_numbers)
+            and (followers_count or following_count)
+        ):
+            if followers_count:
+                if max_followers and followers_count > max_followers:
                     inap_msg = (
-                        "'{}' is not a {} with the relationship ratio of {}  "
-                        "~skipping user\n"
-                        .format(userid,
-                                "potential user" if not reverse_relationship
-                                else "massive follower",
-                                truncate_float(relationship_ratio, 2)))
+                        "User '{}'s followers count exceeds maximum "
+                        "limit  ~skipping user\n"
+                        .format(userid))
                     return False, inap_msg
 
-            elif delimit_by_numbers:
-                if followers_count:
-                    if max_followers:
-                        if followers_count > max_followers:
-                            inap_msg = (
-                                "User '{}'s followers count exceeds maximum "
-                                "limit  ~skipping user\n"
-                                .format(userid))
-                            return False, inap_msg
+                if min_followers and followers_count < min_followers:
+                    inap_msg = (
+                        "User '{}'s followers count is less than "
+                        "minimum limit  ~skipping user\n"
+                        .format(userid))
+                    return False, inap_msg
 
-                    if min_followers:
-                        if followers_count < min_followers:
-                            inap_msg = (
-                                "User '{}'s followers count is less than "
-                                "minimum limit  ~skipping user\n"
-                                .format(userid))
-                            return False, inap_msg
+            if following_count:
+                if max_following and following_count > max_following:
+                    inap_msg = (
+                        "User '{}'s following count exceeds maximum "
+                        "limit  ~skipping user\n"
+                        .format(userid))
+                    return False, inap_msg
 
-                if following_count:
-                    if max_following:
-                        if following_count > max_following:
-                            inap_msg = (
-                                "User '{}'s following count exceeds maximum "
-                                "limit  ~skipping user\n"
-                                .format(userid))
-                            return False, inap_msg
+                if min_following and following_count < min_following:
+                    inap_msg = (
+                        "User '{}'s following count is less than "
+                        "minimum limit  ~skipping user\n"
+                        .format(userid))
+                    return False, inap_msg
 
-                    if min_following:
-                        if following_count < min_following:
-                            inap_msg = (
-                                "User '{}'s following count is less than "
-                                "minimum limit  ~skipping user\n"
-                                .format(userid))
-                            return False, inap_msg
-
-                if potency_ratio:
-                    if relationship_ratio and relationship_ratio < \
-                            potency_ratio:
-                        inap_msg = (
-                            "'{}' is not a {} with the relationship ratio of "
-                            "{}  ~skipping user\n"
-                            .format(userid,
-                                    "potential user" if not
-                                    reverse_relationship else "massive "
-                                                              "follower",
-                                    truncate_float(relationship_ratio, 2)))
-                        return False, inap_msg
+            if (
+                potency_ratio
+                and relationship_ratio
+                and relationship_ratio < potency_ratio
+            ):
+                inap_msg = (
+                    "'{}' is not a {} with the relationship ratio of "
+                    "{}  ~skipping user\n"
+                    .format(userid,
+                            "potential user" if not
+                            reverse_relationship else "massive "
+                                                      "follower",
+                            truncate_float(relationship_ratio, 2)))
+                return False, inap_msg
 
     # TODO All graphql logics have to be reimplemented
     # ie POST, Profile pic, business related logics have to be rewitten
@@ -648,8 +675,8 @@ def delete_line_from_file(filepath, userToDelete, logger):
         return 0
 
     try:
-        file_path_old = filepath + ".old"
-        file_path_Temp = filepath + ".temp"
+        file_path_old = f'{filepath}.old'
+        file_path_Temp = f'{filepath}.temp'
 
         with open(filepath, "r") as f:
             lines = f.readlines()
@@ -707,10 +734,8 @@ def delete_line_from_file(filepath, userToDelete, logger):
 
 def scroll_bottom(browser, element, range_int):
     # put a limit to the scrolling
-    if range_int > 50:
-        range_int = 50
-
-    for i in range(int(range_int / 2)):
+    range_int = min(range_int, 50)
+    for _ in range(int(range_int / 2)):
         browser.execute_script(
             "arguments[0].scrollTop = arguments[0].scrollHeight", element)
         # update server calls
@@ -849,7 +874,7 @@ def get_number_of_posts(browser):
 def get_following_count(browser, base_url, username, userid, logger, Settings):
     """ Gets the followers & following counts of a given user """
     if base_url[-1] != '/':
-        base_url = base_url + '/'
+        base_url = f'{base_url}/'
     user_link = base_url + "{}/following".format(userid)
     web_address_navigator(browser, user_link, logger, Settings)
 
@@ -885,7 +910,7 @@ def get_followers_count_nonfriend_public_case(
 def get_followers_count(browser, base_url, username, userid, logger, Settings):
     """ Gets the followers & following counts of a given user """
     if not base_url.endswith('/'):
-        base_url = base_url + '/'
+        base_url = f'{base_url}/'
     user_link = base_url + "{}/followers".format(userid)
     web_address_navigator(browser, user_link, logger, Settings)
 
@@ -925,7 +950,6 @@ def web_address_navigator(browser, link, logger, Settings):
     current_url = get_current_url(browser)
     if current_url.strip("/") == link.strip("/"):
         return
-    total_timeouts = 0
     page_type = None  # file or directory
 
     logger.info("Navigating from {} To {}".format(current_url, link))
@@ -940,7 +964,8 @@ def web_address_navigator(browser, link, logger, Settings):
     new_navigation = (current_url != link)
 
     if current_url is None or new_navigation:
-        link = link + '/' if page_type == "dir" else link  # directory links
+        link = f'{link}/' if page_type == "dir" else link
+        total_timeouts = 0
         # navigate faster
         while True:
             try:
@@ -1063,25 +1088,20 @@ def highlight_print(Settings, username=None, message=None, priority=None, level=
 
 def remove_duplicates(container, keep_order, logger):
     """ Remove duplicates from all kinds of data types easily """
-    # add support for data types as needed in future
-    # currently only 'list' data type is supported
     if isinstance(container, list):
-        if keep_order is True:
-            result = sorted(set(container), key=container.index)
+        return (
+            sorted(set(container), key=container.index)
+            if keep_order is True
+            else set(container)
+        )
 
-        else:
-            result = set(container)
+    if not logger:
+        logger = Settings.logger
 
-    else:
-        if not logger:
-            logger = Settings.logger
-
-        logger.warning("The given data type- '{}' is not supported "
-                       "in `remove_duplicates` function, yet!"
-                       .format(type(container)))
-        result = container
-
-    return result
+    logger.warning("The given data type- '{}' is not supported "
+                   "in `remove_duplicates` function, yet!"
+                   .format(type(container)))
+    return container
 
 
 # def dump_record_activity(profile_name, logger, logfolder, Settings):
@@ -1161,7 +1181,7 @@ def ping_server(host, logger):
     param = "-n" if system().lower() == "windows" else "-c"
     # building the command. Ex: "ping -c 1 google.com"
     command = ' '.join(["ping", param, '1', str(host)])
-    need_sh = False if system().lower() == "windows" else True
+    need_sh = system().lower() != "windows"
 
     # pinging
     ping_attempts = 2
@@ -1170,7 +1190,7 @@ def ping_server(host, logger):
     while connectivity is not True and ping_attempts > 0:
         connectivity = call(command, shell=need_sh) == 0
 
-        if connectivity is False:
+        if not connectivity:
             logger.warning(
                 "Pinging the server again!\t~total attempts left: {}"
                 .format(ping_attempts))
@@ -1189,7 +1209,7 @@ def emergency_exit(browser, Settings, base_url, username,
                    userid, logger, logfolder, login_state=None):
     """ Raise emergency if the is no connection to server OR if user is not
     logged in """
-    using_proxy = True if Settings.connection_type == "proxy" else False
+    using_proxy = Settings.connection_type == "proxy"
     # ping the server only if connected directly rather than through a proxy
     if not using_proxy:
         server_address = base_url
@@ -1225,10 +1245,6 @@ def load_user_id(username, person, logger, logfolder):
 
             for row in reader:
                 entries = row[0].split(' ~ ')
-                if len(entries) < 3:
-                    # old entry which does not contain an ID
-                    pass
-
                 user_name = entries[1]
                 if user_name == person:
                     user_id = entries[2]
@@ -1260,7 +1276,7 @@ def check_authorization(browser, Settings, base_url, username,
     if (not current_url or base_url not in current_url):
         return False
     if not base_url.endswith('/'):
-        base_url = base_url + '/'
+        base_url = f'{base_url}/'
     profile_link = base_url + '{}'.format(userid)
     web_address_navigator(browser, profile_link, logger, Settings)
     logger.critical("--> '{}' is not logged in!\n".format(username))
@@ -1471,9 +1487,7 @@ def get_username_from_id(browser, base_url, user_id, logger):
         logger.info(
             "Encountered an error to find `pre` in page, skipping username.")
         return None
-    user_data = json.loads(pre)["data"]["user"]
-
-    if user_data:
+    if user_data := json.loads(pre)["data"]["user"]:
         user_data = user_data["edge_owner_to_timeline_media"]
 
         if user_data["edges"]:
@@ -1481,20 +1495,18 @@ def get_username_from_id(browser, base_url, user_id, logger):
             post_page = base_url + "/p/{}".format(post_code)
 
             web_address_navigator(browser, post_page, logger, Settings)
-            username = get_username(browser, "post", logger)
-            if username:
+            if username := get_username(browser, "post", logger):
                 return username
 
-        else:
-            if user_data["count"] == 0:
-                logger.info(
-                    "Profile with ID {}: no pics found".format(user_id))
+        elif user_data["count"] == 0:
+            logger.info(
+                "Profile with ID {}: no pics found".format(user_id))
 
-            else:
-                logger.info(
-                    "Can't load pics of a private profile to find username ("
-                    "ID: {})".format(
-                        user_id))
+        else:
+            logger.info(
+                "Can't load pics of a private profile to find username ("
+                "ID: {})".format(
+                    user_id))
 
     else:
         logger.info(
@@ -1540,18 +1552,18 @@ def is_page_available(browser, logger, Settings):
         reload_webpage(browser, Settings)
         page_title = get_page_title(browser, logger)
 
-        if any(keyword in page_title for keyword in expected_keywords):
-            if "Page Not Found" in page_title:
-                logger.warning(
-                    "The page isn't available!\t~the link may be broken, "
-                    "or the page may have been removed...")
+    if any(keyword in page_title for keyword in expected_keywords):
+        if "Page Not Found" in page_title:
+            logger.warning(
+                "The page isn't available!\t~the link may be broken, "
+                "or the page may have been removed...")
 
-            elif "Content Unavailable" in page_title:
-                logger.warning(
-                    "The page isn't available!\t~the user may have blocked "
-                    "you...")
+        elif "Content Unavailable" in page_title:
+            logger.warning(
+                "The page isn't available!\t~the user may have blocked "
+                "you...")
 
-            return False
+        return False
 
     return True
 
@@ -1591,10 +1603,7 @@ def get_page_title(browser, logger):
 
 def click_visibly(browser, Settings, element):
     """ Click as the element become visible """
-    if element.is_displayed():
-        click_element(browser, Settings, element)
-
-    else:
+    if not element.is_displayed():
         browser.execute_script("arguments[0].style.visibility = 'visible'; "
                                "arguments[0].style.height = '10px'; "
                                "arguments[0].style.width = '10px'; "
@@ -1603,7 +1612,7 @@ def click_visibly(browser, Settings, element):
         # update server calls
         update_activity(Settings)
 
-        click_element(browser, Settings, element)
+    click_element(browser, Settings, element)
 
     return True
 
@@ -1642,10 +1651,7 @@ def get_action_delay(action, Settings):
             max_range = 100
 
         if min_range > max_range:
-            a = min_range
-            min_range = max_range
-            max_range = a
-
+            min_range, max_range = max_range, min_range
         custom_delay = random.uniform(custom_delay * min_range / 100,
                                       custom_delay * max_range / 100)
 
@@ -1669,15 +1675,14 @@ def deform_emojis(text):
                           .replace(':', '')
                           .replace('_', ' '))
             if word_emoji not in emojis_in_text:  # do not add an emoji if
-                # already exists in text
-                emojiless_text += ' '
                 new_text += " ({}) ".format(word_emoji)
                 emojis_in_text.append(word_emoji)
             else:
-                emojiless_text += ' '
                 new_text += ' '  # add a space [instead of an emoji to be
-                # duplicated]
+                            # duplicated]
 
+            # already exists in text
+            emojiless_text += ' '
         else:
             new_text += word
             emojiless_text += word
@@ -1690,12 +1695,7 @@ def deform_emojis(text):
 
 def extract_text_from_element(elem):
     """ As an element is valid and contains text, extract it and return """
-    if elem and hasattr(elem, 'text') and elem.text:
-        text = elem.text
-    else:
-        text = None
-
-    return text
+    return elem.text if elem and hasattr(elem, 'text') and elem.text else None
 
 
 def truncate_float(number, precision, round=False):
@@ -1715,7 +1715,7 @@ def truncate_float(number, precision, round=False):
     else:
         operate_on = 1  # returns the absolute number (e.g. 11.0 from 11.456)
 
-        for i in range(precision):
+        for _ in range(precision):
             operate_on *= 10
 
         short_float = float(int(number * operate_on)) / operate_on
@@ -1730,27 +1730,20 @@ def get_time_until_next_month():
     year = now.year if now.month < 12 else now.year + 1
     date_of_next_month = datetime.datetime(year, next_month, 1)
 
-    remaining_seconds = (date_of_next_month - now).total_seconds()
-
-    return remaining_seconds
+    return (date_of_next_month - now).total_seconds()
 
 
 def remove_extra_spaces(text):
     """ Find and remove redundant spaces more than 1 in text """
-    new_text = re.sub(
+    return re.sub(
         r" {2,}", ' ', text
     )
-
-    return new_text
 
 
 def has_any_letters(text):
     """ Check if the text has any letters in it """
-    # result = re.search("[A-Za-z]", text)   # works only with english letters
-    result = any(c.isalpha() for c in
-                 text)  # works with any letters - english or non-english
-
-    return result
+    return any(c.isalpha() for c in
+                 text)
 
 
 def save_account_progress(browser, base_url, username, logger, Settings):

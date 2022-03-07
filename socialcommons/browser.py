@@ -33,7 +33,7 @@ def set_selenium_local_session(proxy_address,
     err_msg = ''
 
     if use_firefox:
-        if passed_options == None:
+        if passed_options is None:
             firefox_options = Firefox_Options()
         else:
             firefox_options = passed_options
@@ -72,10 +72,7 @@ def set_selenium_local_session(proxy_address,
 
     else:
         chromedriver_location = get_chromedriver_location(Settings)
-        if passed_options == None:
-            chrome_options = Options()
-        else:
-            chrome_options = passed_options
+        chrome_options = Options() if passed_options is None else passed_options
         chrome_options.add_argument("--mute-audio")
         chrome_options.add_argument('--dns-prefetch-disable')
         chrome_options.add_argument('--lang=en-US')
@@ -176,15 +173,14 @@ def set_selenium_remote_session(use_firefox,
     """
     if selenium_driver:
         browser = selenium_driver
+    elif use_firefox:
+        browser = webdriver.Remote(
+            command_executor=selenium_url,
+            desired_capabilities=DesiredCapabilities.FIREFOX)
     else:
-        if use_firefox:
-            browser = webdriver.Remote(
-                command_executor=selenium_url,
-                desired_capabilities=DesiredCapabilities.FIREFOX)
-        else:
-            browser = webdriver.Remote(
-                command_executor=selenium_url,
-                desired_capabilities=DesiredCapabilities.CHROME)
+        browser = webdriver.Remote(
+            command_executor=selenium_url,
+            desired_capabilities=DesiredCapabilities.CHROME)
 
     message = "Session started!"
     highlight_print(Settings, 'browser', message, "initialization", "info", logger)

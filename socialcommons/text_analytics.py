@@ -97,11 +97,11 @@ def text_analysis(text, text_type, Settings, logger):
                                                             text.encode(
                                                                 "utf-8")))
 
-            if not language_of_text:
-                logger.info(
-                    "{}\t~language of text couldn't be detected!".format(
-                        inap_msg))
-                return False
+        if not language_of_text:
+            logger.info(
+                "{}\t~language of text couldn't be detected!".format(
+                    inap_msg))
+            return False
 
         # if language of text is not supported by MeaningCloud, translate it
         # into english by Yandex
@@ -229,21 +229,14 @@ def sentiment_analysis(text, language_of_text, Settings, logger):
         sentiment = sentiment_response.getResults()
         if sentiment and "score_tag" in sentiment.keys() and sentiment[
                 "score_tag"]:
-            # if text has a question mark & its polarity is neither negative
-            # nor none, then label it neutral
-            # @todo: polarity is assigned but never used
-            if sentiment["score_tag"] not in ["N", "N+", "NONE"]:
-                if '?' in text:
-                    pass
             return sentiment
 
-        else:
-            status_message = sentiment_response.getStatusMsg()
-            print('')
-            logger.error("{}\t~there was an unexpected error :|"
-                         "\n{}\n".format(MEANINGCLOUD_FAILURE_MSG,
-                                         status_message))
-            return None
+        status_message = sentiment_response.getStatusMsg()
+        print('')
+        logger.error("{}\t~there was an unexpected error :|"
+                     "\n{}\n".format(MEANINGCLOUD_FAILURE_MSG,
+                                     status_message))
+        return None
 
     except (ValueError, ConnectionError) as exc:
         print('')
@@ -282,8 +275,7 @@ def detect_language(text, Settings):
 
     # get the result
     if "lang" in data.keys() and data["lang"]:
-        language_of_text = data["lang"]
-        return language_of_text
+        return data["lang"]
 
     else:
         return None
@@ -321,8 +313,7 @@ def yandex_supported_languages(Settings, language_code="en"):
 
     data = json.loads(req.text)
     if "langs" in data.keys() and data["langs"]:
-        language_codes = data["langs"].keys()
-        return language_codes
+        return data["langs"].keys()
 
     else:
         return None
@@ -367,8 +358,7 @@ def translate_text(translation_direction, text_to_translate, Settings):
 
     # get the result
     if "text" in data.keys() and data["text"]:
-        translated_text = data["text"][0]
-        return translated_text
+        return data["text"][0]
 
     else:
         return None
